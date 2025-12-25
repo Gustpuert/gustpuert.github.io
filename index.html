@@ -1,28 +1,33 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>MagicBank Academy · Cocina Avanzada</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<title>MagicBank Academy · Aula</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <style>
+/* =========================
+   RESET Y BASE
+========================= */
 * {
   box-sizing: border-box;
 }
 
 html, body {
-  height: 100%;
   margin: 0;
+  height: 100%;
   font-family: Arial, sans-serif;
   background: #0a1f44;
 }
 
+/* =========================
+   LAYOUT
+========================= */
 body {
   display: flex;
   flex-direction: column;
 }
 
-/* HEADER */
 header {
   background: #0a1f44;
   color: #c9a14a;
@@ -32,7 +37,9 @@ header {
   flex-shrink: 0;
 }
 
-/* CHAT AREA */
+/* =========================
+   CHAT
+========================= */
 #chat {
   flex: 1;
   background: #f4f6fa;
@@ -40,9 +47,8 @@ header {
   overflow-y: auto;
 }
 
-/* MENSAJES */
 .msg {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   line-height: 1.4;
 }
 
@@ -55,7 +61,35 @@ header {
   color: #222;
 }
 
-/* FOOTER INPUT */
+/* =========================
+   ORBE AVATAR
+========================= */
+#orb-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px;
+  background: #0a1f44;
+}
+
+#orb {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle at top, #1c3b75, #0a1f44);
+  box-shadow: 0 0 18px rgba(201,161,74,0.2);
+  cursor: pointer;
+  transition: box-shadow 0.3s ease, background 0.3s ease;
+}
+
+#orb.speaking {
+  background: radial-gradient(circle at top, #ffd98a, #c9a14a);
+  box-shadow: 0 0 28px rgba(201,161,74,0.9);
+}
+
+/* =========================
+   INPUT
+========================= */
 footer {
   display: flex;
   gap: 8px;
@@ -83,12 +117,6 @@ button {
   cursor: pointer;
 }
 
-#mic {
-  background: #0a1f44;
-  color: #c9a14a;
-  font-size: 18px;
-}
-
 #send {
   background: #c9a14a;
   color: #0a1f44;
@@ -103,26 +131,44 @@ button:active {
 <body>
 
 <header>
-  MagicBank Academy · Cocina Avanzada
+  MagicBank Academy · Aula
 </header>
 
 <div id="chat"></div>
 
+<div id="orb-container">
+  <div id="orb" title="Escuchar al tutor"></div>
+</div>
+
 <footer>
-  <textarea id="input" placeholder="Escribe o habla con el tutor..."></textarea>
-  <button id="mic">🎤</button>
+  <textarea id="input" placeholder="Escribe al tutor..."></textarea>
   <button id="send">Enviar</button>
 </footer>
 
 <script>
+/* =========================
+   ELEMENTOS
+========================= */
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
 const sendBtn = document.getElementById("send");
-const micBtn = document.getElementById("mic");
+const orb = document.getElementById("orb");
 
+/* =========================
+   BACKEND
+========================= */
 const BACKEND_URL =
   "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
 
+/* =========================
+   ESTADO VOZ
+========================= */
+let lastTutorText = "";
+let speaking = false;
+
+/* =========================
+   CHAT
+========================= */
 function addMessage(text, cls) {
   const div = document.createElement("div");
   div.className = "msg " + cls;
@@ -131,6 +177,9 @@ function addMessage(text, cls) {
   chat.scrollTop = chat.scrollHeight;
 }
 
+/* =========================
+   ENVÍO MENSAJE
+========================= */
 async function sendMessage(msg) {
   addMessage("Tú: " + msg, "user");
 
@@ -146,7 +195,14 @@ async function sendMessage(msg) {
     });
 
     const data = await res.json();
-    addMessage("Tutor: " + (data.text || data.response || "Sin respuesta"), "tutor");
+    const tutorText = data.text || data.response || "";
+
+    if (tutorText) {
+      lastTutorText = tutorText;
+      addMessage("Tutor: " + tutorText, "tutor");
+    } else {
+      addMessage("Tutor sin respuesta.", "tutor");
+    }
 
   } catch (e) {
     addMessage("Error de conexión con el tutor.", "tutor");
@@ -160,21 +216,44 @@ sendBtn.onclick = () => {
   sendMessage(msg);
 };
 
-/* MICRÓFONO */
-const SpeechRecognition =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
+/* =========================
+   VOZ (SOLO BAJO DEMANDA)
+========================= */
+function speak(text) {
+  if (!window.speechSynthesis || !text) return;
 
-if (SpeechRecognition) {
-  const rec = new SpeechRecognition();
-  rec.lang = "es-ES";
-  rec.onresult = e => {
-    input.value = e.results[0][0].transcript;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "es-ES";
+  utterance.rate = 0.95;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+
+  utterance.onstart = () => {
+    speaking = true;
+    orb.classList.add("speaking");
   };
-  micBtn.onclick = () => rec.start();
-} else {
-  micBtn.disabled = true;
-  micBtn.textContent = "🚫";
+
+  utterance.onend = () => {
+    speaking = false;
+    orb.classList.remove("speaking");
+  };
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
 }
+
+/* =========================
+   ORBE CLICK
+========================= */
+orb.onclick = () => {
+  if (speaking) {
+    window.speechSynthesis.cancel();
+    orb.classList.remove("speaking");
+    speaking = false;
+    return;
+  }
+  speak(lastTutorText);
+};
 </script>
 
 </body>
