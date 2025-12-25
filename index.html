@@ -21,7 +21,7 @@ html, body {
 }
 
 /* =========================
-   LAYOUT
+   LAYOUT GENERAL
 ========================= */
 body {
   display: flex;
@@ -49,7 +49,7 @@ header {
 
 .msg {
   margin-bottom: 14px;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .user {
@@ -62,29 +62,51 @@ header {
 }
 
 /* =========================
-   ORBE AVATAR
+   AVATAR ORBE
 ========================= */
 #orb-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 14px;
+  padding: 18px;
   background: #0a1f44;
 }
 
+/* ORBE BASE */
 #orb {
-  width: 72px;
-  height: 72px;
+  width: 78px;
+  height: 78px;
   border-radius: 50%;
   background: radial-gradient(circle at top, #1c3b75, #0a1f44);
-  box-shadow: 0 0 18px rgba(201,161,74,0.2);
+  box-shadow:
+    0 0 18px rgba(201,161,74,0.25),
+    inset 0 0 10px rgba(255,255,255,0.05);
   cursor: pointer;
   transition: box-shadow 0.3s ease, background 0.3s ease;
+  animation: breathe 4.5s ease-in-out infinite;
 }
 
+/* RESPIRACIÓN SUAVE (SILENCIO) */
+@keyframes breathe {
+  0%   { transform: scale(1);   box-shadow: 0 0 18px rgba(201,161,74,0.20); }
+  50%  { transform: scale(1.04); box-shadow: 0 0 24px rgba(201,161,74,0.35); }
+  100% { transform: scale(1);   box-shadow: 0 0 18px rgba(201,161,74,0.20); }
+}
+
+/* HABLANDO */
 #orb.speaking {
-  background: radial-gradient(circle at top, #ffd98a, #c9a14a);
-  box-shadow: 0 0 28px rgba(201,161,74,0.9);
+  background: radial-gradient(circle at top, #ffe2a6, #c9a14a);
+  box-shadow:
+    0 0 36px rgba(201,161,74,0.95),
+    inset 0 0 14px rgba(255,255,255,0.35);
+  animation: pulse 0.9s ease-in-out infinite;
+}
+
+/* PULSO DE VOZ */
+@keyframes pulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.07); }
+  100% { transform: scale(1); }
 }
 
 /* =========================
@@ -112,12 +134,9 @@ textarea {
 button {
   border: none;
   border-radius: 8px;
-  padding: 0 14px;
+  padding: 0 16px;
   font-weight: bold;
   cursor: pointer;
-}
-
-#send {
   background: #c9a14a;
   color: #0a1f44;
 }
@@ -161,7 +180,7 @@ const BACKEND_URL =
   "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
 
 /* =========================
-   ESTADO VOZ
+   ESTADO DE VOZ
 ========================= */
 let lastTutorText = "";
 let speaking = false;
@@ -178,7 +197,7 @@ function addMessage(text, cls) {
 }
 
 /* =========================
-   ENVÍO MENSAJE
+   ENVÍO DE MENSAJE
 ========================= */
 async function sendMessage(msg) {
   addMessage("Tú: " + msg, "user");
@@ -217,7 +236,7 @@ sendBtn.onclick = () => {
 };
 
 /* =========================
-   VOZ (SOLO BAJO DEMANDA)
+   VOZ (BAJO DEMANDA)
 ========================= */
 function speak(text) {
   if (!window.speechSynthesis || !text) return;
