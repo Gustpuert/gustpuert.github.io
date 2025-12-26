@@ -25,7 +25,7 @@ header {
   background: #0a1f44;
   color: #c9a14a;
   text-align: center;
-  padding: 14px;
+  padding: 12px;
   font-weight: bold;
   flex-shrink: 0;
 }
@@ -46,10 +46,12 @@ header {
 /* FOOTER */
 footer {
   display: flex;
+  align-items: center;
   gap: 8px;
   padding: 10px;
   background: #ffffff;
   border-top: 1px solid #ccc;
+  flex-shrink: 0;
 }
 
 textarea {
@@ -70,15 +72,26 @@ button {
   cursor: pointer;
 }
 
-#mic {
-  background: #0a1f44;
-  color: #c9a14a;
-  font-size: 18px;
-}
-
 #send {
   background: #c9a14a;
   color: #0a1f44;
+}
+
+/* ===== AVATAR ORBE ===== */
+#avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #1b3b6f, #0a1f44);
+  box-shadow: 0 0 6px rgba(201,161,74,0.3);
+  transition: box-shadow 0.3s ease;
+}
+
+#avatar.hablando {
+  box-shadow:
+    0 0 10px rgba(201,161,74,0.8),
+    0 0 20px rgba(201,161,74,0.6),
+    0 0 30px rgba(201,161,74,0.4);
 }
 </style>
 </head>
@@ -90,8 +103,8 @@ button {
 <div id="chat"></div>
 
 <footer>
+  <div id="avatar"></div>
   <textarea id="input" placeholder="Escribe o habla con el tutor..."></textarea>
-  <button id="mic">🎤</button>
   <button id="send">Enviar</button>
 </footer>
 
@@ -99,15 +112,13 @@ button {
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
 const sendBtn = document.getElementById("send");
-const micBtn = document.getElementById("mic");
+const avatar = document.getElementById("avatar");
 
 /* BACKEND REAL */
 const BACKEND_URL =
   "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
 
-/* =========================
-   MENSAJES
-========================= */
+/* MENSAJES */
 function addMessage(text, cls) {
   const div = document.createElement("div");
   div.className = "msg " + cls;
@@ -116,42 +127,38 @@ function addMessage(text, cls) {
   chat.scrollTop = chat.scrollHeight;
 }
 
-/* =========================
-   VOZ NATURAL (FASE D)
-========================= */
-let vocesDisponibles = [];
+/* ===== VOZ NATURAL ===== */
+let voces = [];
 
 function cargarVoces() {
-  vocesDisponibles = speechSynthesis.getVoices();
+  voces = speechSynthesis.getVoices();
 }
-
 speechSynthesis.onvoiceschanged = cargarVoces;
 cargarVoces();
 
-function hablarComoTutor(texto) {
+function hablar(texto) {
   if (!window.speechSynthesis) return;
 
-  const utter = new SpeechSynthesisUtterance(texto);
+  const u = new SpeechSynthesisUtterance(texto);
 
-  // 🎯 SELECCIÓN DE VOZ HUMANA (NO ROBOT)
-  const vozNatural = vocesDisponibles.find(v =>
+  const vozHumana = voces.find(v =>
     v.lang.startsWith("es") &&
     !v.name.toLowerCase().includes("robot")
   );
 
-  if (vozNatural) utter.voice = vozNatural;
+  if (vozHumana) u.voice = vozHumana;
 
-  utter.rate = 0.95;     // natural
-  utter.pitch = 1.0;    // humano
-  utter.volume = 1.0;
+  u.rate = 0.95;
+  u.pitch = 1.0;
 
-  speechSynthesis.cancel(); // evita superposición
-  speechSynthesis.speak(utter);
+  u.onstart = () => avatar.classList.add("hablando");
+  u.onend = () => avatar.classList.remove("hablando");
+
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
 }
 
-/* =========================
-   ENVÍO AL AULA
-========================= */
+/* ENVÍO */
 async function sendMessage(msg) {
   addMessage("Tú: " + msg, "user");
 
@@ -170,11 +177,9 @@ async function sendMessage(msg) {
     const textoTutor = data.text || data.response || "Sin respuesta";
 
     addMessage("Tutor: " + textoTutor, "tutor");
+    hablar(textoTutor);
 
-    // 🔊 SOLO LEE LO QUE EL TUTOR DIJO
-    hablarComoTutor(textoTutor);
-
-  } catch (e) {
+  } catch {
     addMessage("Error de conexión con el tutor.", "tutor");
   }
 }
@@ -185,24 +190,6 @@ sendBtn.onclick = () => {
   input.value = "";
   sendMessage(msg);
 };
-
-/* =========================
-   MICRÓFONO (INPUT)
-========================= */
-const SpeechRecognition =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
-
-if (SpeechRecognition) {
-  const rec = new SpeechRecognition();
-  rec.lang = "es-ES";
-  rec.onresult = e => {
-    input.value = e.results[0][0].transcript;
-  };
-  micBtn.onclick = () => rec.start();
-} else {
-  micBtn.disabled = true;
-  micBtn.textContent = "🚫";
-}
 </script>
 
 </body>
