@@ -1,33 +1,26 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<title>MagicBank Academy · Aula</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<title>MagicBank Academy · Cocina Avanzada</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-/* =========================
-   RESET Y BASE
-========================= */
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
-  margin: 0;
   height: 100%;
+  margin: 0;
   font-family: Arial, sans-serif;
   background: #0a1f44;
 }
 
-/* =========================
-   LAYOUT GENERAL
-========================= */
 body {
   display: flex;
   flex-direction: column;
 }
 
+/* HEADER */
 header {
   background: #0a1f44;
   color: #c9a14a;
@@ -37,9 +30,7 @@ header {
   flex-shrink: 0;
 }
 
-/* =========================
-   CHAT
-========================= */
+/* CHAT */
 #chat {
   flex: 1;
   background: #f4f6fa;
@@ -47,78 +38,18 @@ header {
   overflow-y: auto;
 }
 
-.msg {
-  margin-bottom: 14px;
-  line-height: 1.45;
-}
+/* MENSAJES */
+.msg { margin-bottom: 12px; line-height: 1.5; }
+.user { color: #0a1f44; font-weight: bold; }
+.tutor { color: #222; }
 
-.user {
-  color: #0a1f44;
-  font-weight: bold;
-}
-
-.tutor {
-  color: #222;
-}
-
-/* =========================
-   AVATAR ORBE
-========================= */
-#orb-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 18px;
-  background: #0a1f44;
-}
-
-/* ORBE BASE */
-#orb {
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
-  background: radial-gradient(circle at top, #1c3b75, #0a1f44);
-  box-shadow:
-    0 0 18px rgba(201,161,74,0.25),
-    inset 0 0 10px rgba(255,255,255,0.05);
-  cursor: pointer;
-  transition: box-shadow 0.3s ease, background 0.3s ease;
-  animation: breathe 4.5s ease-in-out infinite;
-}
-
-/* RESPIRACIÓN SUAVE (SILENCIO) */
-@keyframes breathe {
-  0%   { transform: scale(1);   box-shadow: 0 0 18px rgba(201,161,74,0.20); }
-  50%  { transform: scale(1.04); box-shadow: 0 0 24px rgba(201,161,74,0.35); }
-  100% { transform: scale(1);   box-shadow: 0 0 18px rgba(201,161,74,0.20); }
-}
-
-/* HABLANDO */
-#orb.speaking {
-  background: radial-gradient(circle at top, #ffe2a6, #c9a14a);
-  box-shadow:
-    0 0 36px rgba(201,161,74,0.95),
-    inset 0 0 14px rgba(255,255,255,0.35);
-  animation: pulse 0.9s ease-in-out infinite;
-}
-
-/* PULSO DE VOZ */
-@keyframes pulse {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.07); }
-  100% { transform: scale(1); }
-}
-
-/* =========================
-   INPUT
-========================= */
+/* FOOTER */
 footer {
   display: flex;
   gap: 8px;
   padding: 10px;
   background: #ffffff;
   border-top: 1px solid #ccc;
-  flex-shrink: 0;
 }
 
 textarea {
@@ -134,59 +65,48 @@ textarea {
 button {
   border: none;
   border-radius: 8px;
-  padding: 0 16px;
+  padding: 0 14px;
   font-weight: bold;
   cursor: pointer;
-  background: #c9a14a;
-  color: #0a1f44;
 }
 
-button:active {
-  opacity: 0.85;
+#mic {
+  background: #0a1f44;
+  color: #c9a14a;
+  font-size: 18px;
+}
+
+#send {
+  background: #c9a14a;
+  color: #0a1f44;
 }
 </style>
 </head>
 
 <body>
 
-<header>
-  MagicBank Academy · Aula
-</header>
+<header>MagicBank Academy · Cocina Avanzada</header>
 
 <div id="chat"></div>
 
-<div id="orb-container">
-  <div id="orb" title="Escuchar al tutor"></div>
-</div>
-
 <footer>
-  <textarea id="input" placeholder="Escribe al tutor..."></textarea>
+  <textarea id="input" placeholder="Escribe o habla con el tutor..."></textarea>
+  <button id="mic">🎤</button>
   <button id="send">Enviar</button>
 </footer>
 
 <script>
-/* =========================
-   ELEMENTOS
-========================= */
 const chat = document.getElementById("chat");
 const input = document.getElementById("input");
 const sendBtn = document.getElementById("send");
-const orb = document.getElementById("orb");
+const micBtn = document.getElementById("mic");
 
-/* =========================
-   BACKEND
-========================= */
+/* BACKEND REAL */
 const BACKEND_URL =
   "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
 
 /* =========================
-   ESTADO DE VOZ
-========================= */
-let lastTutorText = "";
-let speaking = false;
-
-/* =========================
-   CHAT
+   MENSAJES
 ========================= */
 function addMessage(text, cls) {
   const div = document.createElement("div");
@@ -197,7 +117,40 @@ function addMessage(text, cls) {
 }
 
 /* =========================
-   ENVÍO DE MENSAJE
+   VOZ NATURAL (FASE D)
+========================= */
+let vocesDisponibles = [];
+
+function cargarVoces() {
+  vocesDisponibles = speechSynthesis.getVoices();
+}
+
+speechSynthesis.onvoiceschanged = cargarVoces;
+cargarVoces();
+
+function hablarComoTutor(texto) {
+  if (!window.speechSynthesis) return;
+
+  const utter = new SpeechSynthesisUtterance(texto);
+
+  // 🎯 SELECCIÓN DE VOZ HUMANA (NO ROBOT)
+  const vozNatural = vocesDisponibles.find(v =>
+    v.lang.startsWith("es") &&
+    !v.name.toLowerCase().includes("robot")
+  );
+
+  if (vozNatural) utter.voice = vozNatural;
+
+  utter.rate = 0.95;     // natural
+  utter.pitch = 1.0;    // humano
+  utter.volume = 1.0;
+
+  speechSynthesis.cancel(); // evita superposición
+  speechSynthesis.speak(utter);
+}
+
+/* =========================
+   ENVÍO AL AULA
 ========================= */
 async function sendMessage(msg) {
   addMessage("Tú: " + msg, "user");
@@ -214,14 +167,12 @@ async function sendMessage(msg) {
     });
 
     const data = await res.json();
-    const tutorText = data.text || data.response || "";
+    const textoTutor = data.text || data.response || "Sin respuesta";
 
-    if (tutorText) {
-      lastTutorText = tutorText;
-      addMessage("Tutor: " + tutorText, "tutor");
-    } else {
-      addMessage("Tutor sin respuesta.", "tutor");
-    }
+    addMessage("Tutor: " + textoTutor, "tutor");
+
+    // 🔊 SOLO LEE LO QUE EL TUTOR DIJO
+    hablarComoTutor(textoTutor);
 
   } catch (e) {
     addMessage("Error de conexión con el tutor.", "tutor");
@@ -236,43 +187,22 @@ sendBtn.onclick = () => {
 };
 
 /* =========================
-   VOZ (BAJO DEMANDA)
+   MICRÓFONO (INPUT)
 ========================= */
-function speak(text) {
-  if (!window.speechSynthesis || !text) return;
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "es-ES";
-  utterance.rate = 0.95;
-  utterance.pitch = 1.0;
-  utterance.volume = 1.0;
-
-  utterance.onstart = () => {
-    speaking = true;
-    orb.classList.add("speaking");
+if (SpeechRecognition) {
+  const rec = new SpeechRecognition();
+  rec.lang = "es-ES";
+  rec.onresult = e => {
+    input.value = e.results[0][0].transcript;
   };
-
-  utterance.onend = () => {
-    speaking = false;
-    orb.classList.remove("speaking");
-  };
-
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
+  micBtn.onclick = () => rec.start();
+} else {
+  micBtn.disabled = true;
+  micBtn.textContent = "🚫";
 }
-
-/* =========================
-   ORBE CLICK
-========================= */
-orb.onclick = () => {
-  if (speaking) {
-    window.speechSynthesis.cancel();
-    orb.classList.remove("speaking");
-    speaking = false;
-    return;
-  }
-  speak(lastTutorText);
-};
 </script>
 
 </body>
